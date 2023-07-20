@@ -54,7 +54,6 @@ from .fetch_settlement_recon_data_item import FetchSettlementReconDataItem
 from .fetch_settlement_recon_request import FetchSettlementReconRequest
 from .fetch_settlement_recon_request_filters import FetchSettlementReconRequestFilters
 from .fetch_settlement_recon_request_pagination import FetchSettlementReconRequestPagination
-from .get_paymentsfororder_response import GetPaymentsfororderResponse
 from .link_cancelled_error import LinkCancelledError
 from .link_cancelled_response import LinkCancelledResponse
 from .link_customer_details_entity import LinkCustomerDetailsEntity
@@ -196,7 +195,6 @@ __all__ = [
     "FetchSettlementReconRequest",
     "FetchSettlementReconRequestFilters",
     "FetchSettlementReconRequestPagination",
-    "GetPaymentsfororderResponse",
     "LinkCancelledError",
     "LinkCancelledResponse",
     "LinkCustomerDetailsEntity",

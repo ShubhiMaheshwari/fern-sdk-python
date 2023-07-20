@@ -9,7 +9,6 @@ import pydantic
 
 from ...core.api_error import ApiError
 from ...core.remove_none_from_headers import remove_none_from_headers
-from ...types.get_paymentsfororder_response import GetPaymentsfororderResponse
 from ...types.payments_entity import PaymentsEntity
 
 
@@ -27,7 +26,7 @@ class PaymentsClient:
         self.client_secret = client_secret
         self.api_version = api_version
 
-    def get_paymentsfororder(self, order_id: str) -> GetPaymentsfororderResponse:
+    def get_paymentsfororder(self, order_id: str) -> PaymentsEntity:
         _response = httpx.request(
             "GET",
             urllib.parse.urljoin(f"{self._environment}/", f"orders/{order_id}/payments"),
@@ -41,7 +40,7 @@ class PaymentsClient:
             timeout=60,
         )
         if 200 <= _response.status_code < 300:
-            return pydantic.parse_obj_as(GetPaymentsfororderResponse, _response.json())  # type: ignore
+            return pydantic.parse_obj_as(PaymentsEntity, _response.json())  # type: ignore
         try:
             _response_json = _response.json()
         except JSONDecodeError:
@@ -84,7 +83,7 @@ class AsyncPaymentsClient:
         self.client_secret = client_secret
         self.api_version = api_version
 
-    async def get_paymentsfororder(self, order_id: str) -> GetPaymentsfororderResponse:
+    async def get_paymentsfororder(self, order_id: str) -> PaymentsEntity:
         async with httpx.AsyncClient() as _client:
             _response = await _client.request(
                 "GET",
@@ -99,7 +98,7 @@ class AsyncPaymentsClient:
                 timeout=60,
             )
         if 200 <= _response.status_code < 300:
-            return pydantic.parse_obj_as(GetPaymentsfororderResponse, _response.json())  # type: ignore
+            return pydantic.parse_obj_as(PaymentsEntity, _response.json())  # type: ignore
         try:
             _response_json = _response.json()
         except JSONDecodeError:
