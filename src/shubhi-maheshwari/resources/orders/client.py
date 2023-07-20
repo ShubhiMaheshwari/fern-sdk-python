@@ -15,11 +15,13 @@ from ...errors.too_many_requests_error import TooManyRequestsError
 from ...errors.unauthorized_error import UnauthorizedError
 from ...types.api_error import ApiError as types_api_error_ApiError
 from ...types.authentication_error import AuthenticationError
+from ...types.authorization_request_action import AuthorizationRequestAction
 from ...types.customer_details import CustomerDetails
 from ...types.order_meta import OrderMeta
 from ...types.order_pay_request_payment_method import OrderPayRequestPaymentMethod
 from ...types.order_pay_response import OrderPayResponse
 from ...types.orders_entity import OrdersEntity
+from ...types.payments_entity import PaymentsEntity
 from ...types.rate_limit_error import RateLimitError
 from ...types.terminal_details import TerminalDetails
 from ...types.vendor_split import VendorSplit
@@ -29,8 +31,17 @@ OMIT = typing.cast(typing.Any, ...)
 
 
 class OrdersClient:
-    def __init__(self, *, environment: str, api_version: typing.Optional[str] = None):
+    def __init__(
+        self,
+        *,
+        environment: str,
+        client_id: typing.Optional[str] = None,
+        client_secret: typing.Optional[str] = None,
+        api_version: typing.Optional[str] = None,
+    ):
         self._environment = environment
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.api_version = api_version
 
     def create_order(
@@ -46,8 +57,6 @@ class OrdersClient:
         order_note: typing.Optional[str] = OMIT,
         order_tags: typing.Optional[typing.Dict[str, str]] = OMIT,
         order_splits: typing.Optional[typing.List[VendorSplit]] = OMIT,
-        client_id: str,
-        client_secret: str,
     ) -> OrdersEntity:
         _request: typing.Dict[str, typing.Any] = {
             "order_amount": order_amount,
@@ -73,7 +82,11 @@ class OrdersClient:
             urllib.parse.urljoin(f"{self._environment}/", "orders"),
             json=jsonable_encoder(_request),
             headers=remove_none_from_headers(
-                {"x-api-version": self.api_version, "x-client-id": client_id, "x-client-secret": client_secret}
+                {
+                    "x-client-id": self.client_id,
+                    "x-client-secret": self.client_secret,
+                    "x-api-version": self.api_version,
+                }
             ),
             timeout=60,
         )
@@ -111,7 +124,13 @@ class OrdersClient:
             "POST",
             urllib.parse.urljoin(f"{self._environment}/", "orders/sessions"),
             json=jsonable_encoder(_request),
-            headers=remove_none_from_headers({"x-api-version": self.api_version}),
+            headers=remove_none_from_headers(
+                {
+                    "x-client-id": self.client_id,
+                    "x-client-secret": self.client_secret,
+                    "x-api-version": self.api_version,
+                }
+            ),
             timeout=60,
         )
         if 200 <= _response.status_code < 300:
@@ -126,10 +145,73 @@ class OrdersClient:
             raise core_api_error_ApiError(status_code=_response.status_code, body=_response.text)
         raise core_api_error_ApiError(status_code=_response.status_code, body=_response_json)
 
+    def preauthorization(
+        self,
+        order_id: str,
+        *,
+        action: typing.Optional[AuthorizationRequestAction] = OMIT,
+        amount: typing.Optional[float] = OMIT,
+    ) -> PaymentsEntity:
+        _request: typing.Dict[str, typing.Any] = {}
+        if action is not OMIT:
+            _request["action"] = action
+        if amount is not OMIT:
+            _request["amount"] = amount
+        _response = httpx.request(
+            "POST",
+            urllib.parse.urljoin(f"{self._environment}/", f"orders/{order_id}/authorization"),
+            json=jsonable_encoder(_request),
+            headers=remove_none_from_headers(
+                {
+                    "x-client-id": self.client_id,
+                    "x-client-secret": self.client_secret,
+                    "x-api-version": self.api_version,
+                }
+            ),
+            timeout=60,
+        )
+        if 200 <= _response.status_code < 300:
+            return pydantic.parse_obj_as(PaymentsEntity, _response.json())  # type: ignore
+        try:
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise core_api_error_ApiError(status_code=_response.status_code, body=_response.text)
+        raise core_api_error_ApiError(status_code=_response.status_code, body=_response_json)
+
+    def get_order(self, order_id: str) -> OrdersEntity:
+        _response = httpx.request(
+            "GET",
+            urllib.parse.urljoin(f"{self._environment}/", f"orders/{order_id}"),
+            headers=remove_none_from_headers(
+                {
+                    "x-client-id": self.client_id,
+                    "x-client-secret": self.client_secret,
+                    "x-api-version": self.api_version,
+                }
+            ),
+            timeout=60,
+        )
+        if 200 <= _response.status_code < 300:
+            return pydantic.parse_obj_as(OrdersEntity, _response.json())  # type: ignore
+        try:
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise core_api_error_ApiError(status_code=_response.status_code, body=_response.text)
+        raise core_api_error_ApiError(status_code=_response.status_code, body=_response_json)
+
 
 class AsyncOrdersClient:
-    def __init__(self, *, environment: str, api_version: typing.Optional[str] = None):
+    def __init__(
+        self,
+        *,
+        environment: str,
+        client_id: typing.Optional[str] = None,
+        client_secret: typing.Optional[str] = None,
+        api_version: typing.Optional[str] = None,
+    ):
         self._environment = environment
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.api_version = api_version
 
     async def create_order(
@@ -145,8 +227,6 @@ class AsyncOrdersClient:
         order_note: typing.Optional[str] = OMIT,
         order_tags: typing.Optional[typing.Dict[str, str]] = OMIT,
         order_splits: typing.Optional[typing.List[VendorSplit]] = OMIT,
-        client_id: str,
-        client_secret: str,
     ) -> OrdersEntity:
         _request: typing.Dict[str, typing.Any] = {
             "order_amount": order_amount,
@@ -173,7 +253,11 @@ class AsyncOrdersClient:
                 urllib.parse.urljoin(f"{self._environment}/", "orders"),
                 json=jsonable_encoder(_request),
                 headers=remove_none_from_headers(
-                    {"x-api-version": self.api_version, "x-client-id": client_id, "x-client-secret": client_secret}
+                    {
+                        "x-client-id": self.client_id,
+                        "x-client-secret": self.client_secret,
+                        "x-api-version": self.api_version,
+                    }
                 ),
                 timeout=60,
             )
@@ -212,7 +296,13 @@ class AsyncOrdersClient:
                 "POST",
                 urllib.parse.urljoin(f"{self._environment}/", "orders/sessions"),
                 json=jsonable_encoder(_request),
-                headers=remove_none_from_headers({"x-api-version": self.api_version}),
+                headers=remove_none_from_headers(
+                    {
+                        "x-client-id": self.client_id,
+                        "x-client-secret": self.client_secret,
+                        "x-api-version": self.api_version,
+                    }
+                ),
                 timeout=60,
             )
         if 200 <= _response.status_code < 300:
@@ -221,6 +311,62 @@ class AsyncOrdersClient:
             raise TooManyRequestsError(pydantic.parse_obj_as(RateLimitError, _response.json()))  # type: ignore
         if _response.status_code == 500:
             raise InternalServerError(pydantic.parse_obj_as(types_api_error_ApiError, _response.json()))  # type: ignore
+        try:
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise core_api_error_ApiError(status_code=_response.status_code, body=_response.text)
+        raise core_api_error_ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def preauthorization(
+        self,
+        order_id: str,
+        *,
+        action: typing.Optional[AuthorizationRequestAction] = OMIT,
+        amount: typing.Optional[float] = OMIT,
+    ) -> PaymentsEntity:
+        _request: typing.Dict[str, typing.Any] = {}
+        if action is not OMIT:
+            _request["action"] = action
+        if amount is not OMIT:
+            _request["amount"] = amount
+        async with httpx.AsyncClient() as _client:
+            _response = await _client.request(
+                "POST",
+                urllib.parse.urljoin(f"{self._environment}/", f"orders/{order_id}/authorization"),
+                json=jsonable_encoder(_request),
+                headers=remove_none_from_headers(
+                    {
+                        "x-client-id": self.client_id,
+                        "x-client-secret": self.client_secret,
+                        "x-api-version": self.api_version,
+                    }
+                ),
+                timeout=60,
+            )
+        if 200 <= _response.status_code < 300:
+            return pydantic.parse_obj_as(PaymentsEntity, _response.json())  # type: ignore
+        try:
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise core_api_error_ApiError(status_code=_response.status_code, body=_response.text)
+        raise core_api_error_ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def get_order(self, order_id: str) -> OrdersEntity:
+        async with httpx.AsyncClient() as _client:
+            _response = await _client.request(
+                "GET",
+                urllib.parse.urljoin(f"{self._environment}/", f"orders/{order_id}"),
+                headers=remove_none_from_headers(
+                    {
+                        "x-client-id": self.client_id,
+                        "x-client-secret": self.client_secret,
+                        "x-api-version": self.api_version,
+                    }
+                ),
+                timeout=60,
+            )
+        if 200 <= _response.status_code < 300:
+            return pydantic.parse_obj_as(OrdersEntity, _response.json())  # type: ignore
         try:
             _response_json = _response.json()
         except JSONDecodeError:
